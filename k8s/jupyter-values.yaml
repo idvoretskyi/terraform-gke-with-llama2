@@ -1,0 +1,45 @@
+# JupyterHub configuration for Llama2 with GPU support
+hub:
+  config:
+    Authenticator:
+      admin_users:
+        - admin
+  extraConfig:
+    00-gpu-config: |
+      c.KubeSpawner.extra_resource_guarantees = {"nvidia.com/gpu": "1"}
+      c.KubeSpawner.extra_resource_limits = {"nvidia.com/gpu": "1"}
+      
+singleuser:
+  image:
+    name: llama2-jupyter
+    tag: latest
+  extraEnv:
+    HUGGINGFACE_TOKEN: ""  # Set via K8s secret in production
+  profileList:
+    - display_name: "Llama2 GPU Environment"
+      description: "Environment with Llama2 model and GPU support"
+      kubespawner_override:
+        node_selector:
+          cloud.google.com/gke-accelerator: nvidia-tesla-t4
+        tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Equal"
+          value: "present"
+          effect: "NoSchedule"
+        extra_resource_limits:
+          nvidia.com/gpu: "1"
+
+  storage:
+    type: dynamic
+    capacity: 10Gi
+
+prePuller:
+  hook:
+    enabled: false
+
+scheduling:
+  userScheduler:
+    enabled: false
+  userPods:
+    nodeAffinity:
+      matchNodePurpose: prefer

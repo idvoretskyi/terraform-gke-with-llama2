@@ -1,0 +1,9 @@
+# Example values for variables - copy to terraform.tfvars and modify as needed
+project_id      = "your-gcp-project-id"
+region          = "us-central1"
+zone            = "us-central1-a"
+cluster_name    = "llama2-jupyter-cluster"
+gpu_node_count  = 1
+machine_type    = "n1-standard-8"
+gpu_type        = "nvidia-tesla-t4"
+gpu_count       = 1
