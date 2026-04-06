@@ -13,14 +13,8 @@ Deploy [Llama2](https://huggingface.co/meta-llama/Llama-2-7b-hf) on a GPU-enable
 
 ## Prerequisites
 
-- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed and configured
-- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5.0
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- [Helm](https://helm.sh/docs/intro/install/) >= 3.0
-- A GCP project with the following APIs enabled:
-  - Kubernetes Engine API
-  - Compute Engine API
-  - Artifact Registry API (or Container Registry API)
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install), [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5, [kubectl](https://kubernetes.io/docs/tasks/tools/), [Helm](https://helm.sh/docs/intro/install/) >= 3.0
+- A GCP project with **Kubernetes Engine**, **Compute Engine**, and **Artifact Registry** APIs enabled
 - (Optional) A [HuggingFace access token](https://huggingface.co/settings/tokens) for gated model access
 
 ## Setup
@@ -30,90 +24,65 @@ Deploy [Llama2](https://huggingface.co/meta-llama/Llama-2-7b-hf) on a GPU-enable
 ```bash
 export PROJECT_ID="your-gcp-project-id"
 export REGION="us-central1"
-export BUCKET_NAME="${PROJECT_ID}-tfstate"
+export BUCKET="${PROJECT_ID}-tfstate"
 
-gsutil mb -p "$PROJECT_ID" -l "$REGION" "gs://${BUCKET_NAME}"
-gsutil versioning set on "gs://${BUCKET_NAME}"
+gsutil mb -p "$PROJECT_ID" -l "$REGION" "gs://${BUCKET}"
+gsutil versioning set on "gs://${BUCKET}"
 ```
 
-### 2. Prepare configuration
+### 2. Deploy infrastructure
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your project ID and preferences
-```
-
-### 3. Initialize Terraform
-
-```bash
-terraform init -backend-config="bucket=${BUCKET_NAME}"
-```
-
-### 4. Apply the infrastructure
-
-```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars   # set your project_id
+terraform init -backend-config="bucket=${BUCKET}"
 terraform apply
 ```
 
-### 5. Configure kubectl
+### 3. Configure kubectl
 
 ```bash
-# The exact command is shown in Terraform outputs after apply
+# The exact command is also shown in `terraform output`
 gcloud container clusters get-credentials llama2-jupyter-cluster \
   --region us-central1 --project "$PROJECT_ID"
 ```
 
-### 6. (Optional) Install NVIDIA GPU drivers
-
-Modern GKE clusters with COS_CONTAINERD images install GPU drivers automatically. If your cluster version requires manual installation:
+### 4. Build and push the Docker image
 
 ```bash
-kubectl apply -f k8s/nvidia-driver-installer.yaml
-```
-
-### 7. Build and push the Docker image
-
-```bash
-# Using Artifact Registry (recommended)
 export REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/llama2"
 
-# Create the repository (first time only)
 gcloud artifacts repositories create llama2 \
   --repository-format=docker --location="$REGION" --project="$PROJECT_ID"
 
-# Build and push
 docker build -t "${REGISTRY}/llama2-jupyter:latest" docker/
 docker push "${REGISTRY}/llama2-jupyter:latest"
 ```
 
-Update `k8s/jupyter-values.yaml` to point `singleuser.image.name` to your registry path.
+Update `singleuser.image.name` in `k8s/jupyter-values.yaml` to your registry path.
 
-### 8. Set up the HuggingFace token (if using gated models)
-
-```bash
-kubectl create secret generic hf-secret --from-literal=token="hf_YOUR_TOKEN_HERE"
-```
-
-### 9. Install JupyterHub
+### 5. Deploy JupyterHub
 
 ```bash
+# (Optional) Provide a HuggingFace token for gated models
+kubectl create secret generic hf-secret --from-literal=token="hf_YOUR_TOKEN"
+
 helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
 helm repo update
 helm install jupyterhub jupyterhub/jupyterhub --values k8s/jupyter-values.yaml
 ```
 
-### 10. Access JupyterHub
+### 6. Access JupyterHub
 
 ```bash
 kubectl port-forward service/proxy-public 8080:80
 ```
 
-Open <http://localhost:8080> in your browser.
+Open <http://localhost:8080>.
 
 ## Using Llama2
 
-1. Log in and start a new server with the **Llama2 GPU Environment** profile.
-2. Create a new notebook and use the model:
+Start a server with the **Llama2 GPU Environment** profile, then in a notebook:
 
 ```python
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -134,27 +103,27 @@ print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 
 ```bash
 helm uninstall jupyterhub
-terraform destroy
+cd terraform && terraform destroy
 ```
 
-If `terraform destroy` fails due to deletion protection:
+If destroy fails due to deletion protection:
 
 ```bash
-./manual_unlock.sh <project-id> <region> <cluster-name>
+gcloud container clusters update llama2-jupyter-cluster \
+  --project "$PROJECT_ID" --region "$REGION" --no-deletion-protection
 terraform destroy
 ```
-
-## Cost Optimization
-
-- **Spot VMs** -- both node pools use spot instances for significant cost savings.
-- **Autoscaling** -- GPU nodes scale to zero when not in use.
-- **Preemption risk** -- spot VMs may be reclaimed; persistent storage keeps user data safe across restarts.
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| GPU nodes not scheduling | Verify GPU quota in your GCP project and check `kubectl describe node` for taints |
-| Driver installer pod stuck | GKE may auto-install drivers; check if GPU device plugin pods are already running |
-| Model download fails | Ensure `hf-secret` K8s secret exists with a valid HuggingFace token |
-| Terraform state lock | Run `terraform force-unlock <LOCK_ID>` or use `manual_unlock.sh` |
+| GPU nodes not scheduling | Verify GPU quota in your GCP project; check `kubectl describe node` for taints |
+| Model download fails | Ensure the `hf-secret` K8s secret has a valid HuggingFace token |
+| Terraform state lock | Run `terraform force-unlock <LOCK_ID>` |
+
+## Cost Optimization
+
+Both node pools use **spot VMs** for significant savings. GPU nodes **scale to zero** when idle. Persistent storage keeps user data safe across spot preemptions.
+
+> **Note:** GKE clusters on the REGULAR release channel with COS_CONTAINERD images install NVIDIA GPU drivers automatically. If you need manual installation for an older cluster version, apply the [official GKE GPU driver DaemonSet](https://raw.githubusercontent.com/GoogleCloudPlatform/container-engine-accelerators/master/nvidia-driver-installer/cos/daemonset-preloaded-latest.yaml).

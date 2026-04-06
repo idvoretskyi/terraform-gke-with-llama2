@@ -1,41 +1,25 @@
-# Base image with JupyterLab and PyTorch (matches our ML stack)
+# PyTorch + JupyterLab base image (includes torch, jupyterlab, and build-essential)
 FROM quay.io/jupyter/pytorch-notebook:python-3.11
 
 USER root
 
-# Install system dependencies
+# Install git and curl (not in base image)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    curl \
-    && apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends git curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch with CUDA 11.8 support
-RUN pip install --no-cache-dir \
-    torch==2.1.2 \
-    torchvision==0.16.2 \
-    torchaudio==2.1.2 \
-    --extra-index-url https://download.pytorch.org/whl/cu118
-
-# Install Hugging Face Transformers and related packages
+# Install HuggingFace stack
 RUN pip install --no-cache-dir \
     transformers==4.36.2 \
     datasets==2.14.6 \
     accelerate==0.25.0 \
     sentencepiece==0.1.99 \
-    protobuf==4.23.4
+    protobuf==4.23.4 \
+    huggingface_hub
 
-# Install jupyter-related packages
-RUN pip install --no-cache-dir \
-    jupyterlab==4.0.8 \
-    ipywidgets==8.1.1
-
-# Setup Llama2 model downloader
+# Setup model downloader (runs on first notebook start)
 COPY download-llama2.py /opt/download-llama2.py
 RUN echo "exec python /opt/download-llama2.py" > /usr/local/bin/start-notebook.d/download-llama2.sh && \
     chmod +x /usr/local/bin/start-notebook.d/download-llama2.sh
 
-# Switch back to jovyan user
 USER jovyan
