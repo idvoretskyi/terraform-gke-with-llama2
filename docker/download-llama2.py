@@ -1,40 +1,30 @@
 #!/usr/bin/env python3
+"""Download a HuggingFace model at container startup (skip if already cached)."""
 
+import logging
 import os
-import sys
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 
-def download_llama2():
-    print("Starting Llama2 model download...")
-    
-    # Get Hugging Face token from environment (if set)
-    hf_token = os.environ.get('HUGGINGFACE_TOKEN', '')
-    
-    # Model ID for Llama2-7B
-    model_id = "meta-llama/Llama-2-7b-hf"
-    
+from huggingface_hub import snapshot_download
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+
+DEFAULT_MODEL_ID = "meta-llama/Llama-2-7b-hf"
+
+
+def main() -> None:
+    model_id = os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
+    token = os.environ.get("HUGGINGFACE_TOKEN") or None
+
+    # snapshot_download is a no-op when the model is already cached.
+    logger.info("Ensuring %s is available locally ...", model_id)
     try:
-        # Download tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(model_id, use_auth_token=hf_token)
-        
-        # Download model with GPU support
-        model = AutoModelForCausalLM.from_pretrained(
-            model_id,
-            torch_dtype=torch.float16,
-            device_map="auto",
-            use_auth_token=hf_token
-        )
-        
-        print(f"Successfully downloaded {model_id}")
-        
-    except Exception as e:
-        print(f"Error downloading model: {e}")
-        
-        # If access is denied without token
-        if "401" in str(e):
-            print("Access denied. You may need to provide a valid Hugging Face token.")
-            print("Please set the HUGGINGFACE_TOKEN environment variable.")
+        snapshot_download(model_id, token=token)
+        logger.info("Model %s ready.", model_id)
+    except Exception:
+        logger.exception("Failed to download %s.", model_id)
+        logger.info("If access was denied, set HUGGINGFACE_TOKEN to a valid token.")
+
 
 if __name__ == "__main__":
-    download_llama2()
+    main()

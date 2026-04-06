@@ -1,77 +1,32 @@
-# Terraform files
-.terraform/
-terraform.tfstate
-terraform.tfstate.backup
-terraform.tfstate.*.backup
-.terraform.lock.hcl
-.terraformrc
-terraform.rc
-terraform.tfvars
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
 *.tfplan
-crash.log
-crash.*.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Exclude terraform.tfvars.example
+terraform.tfvars
 !terraform.tfvars.example
+crash.log
 
-# OS specific files
+# OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Editor/IDE files
+# Editors
 .vscode/
 .idea/
 *.swp
-*.swo
 *~
-.project
-.classpath
-*.iml
-*.iws
-*.ipr
 
-# Python files
+# Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+*.pyc
 venv/
-ENV/
-env/
 .env
 
-# Jupyter Notebook
+# Jupyter
 .ipynb_checkpoints
 
-# Logs
+# Misc
 *.log
-logs/
-
-# Temporary files created during testing
-temp/
 tmp/

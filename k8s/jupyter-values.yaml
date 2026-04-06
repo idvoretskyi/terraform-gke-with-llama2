@@ -1,26 +1,48 @@
 # JupyterHub configuration for Llama2 with GPU support
+#
+# Install with:
+#   helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
+#   helm repo update
+#   helm install jupyterhub jupyterhub/jupyterhub --values k8s/jupyter-values.yaml
+
 hub:
   config:
     Authenticator:
       admin_users:
         - admin
-  extraConfig:
-    00-gpu-config: |
-      c.KubeSpawner.extra_resource_guarantees = {"nvidia.com/gpu": "1"}
-      c.KubeSpawner.extra_resource_limits = {"nvidia.com/gpu": "1"}
-      
+    NativeAuthenticator:
+      minimum_password_length: 8
+      open_signup: false
+    JupyterHub:
+      authenticator_class: native
+
 singleuser:
   image:
+    # Replace with your registry path, e.g.:
+    #   name: gcr.io/<PROJECT_ID>/llama2-jupyter
     name: llama2-jupyter
     tag: latest
   extraEnv:
-    HUGGINGFACE_TOKEN: ""  # Set via K8s secret in production
+    # Reference the HuggingFace token from a Kubernetes Secret:
+    #   kubectl create secret generic hf-secret --from-literal=token=<YOUR_TOKEN>
+    HUGGINGFACE_TOKEN:
+      valueFrom:
+        secretKeyRef:
+          name: hf-secret
+          key: token
+          optional: true
+  cpu:
+    guarantee: 1
+    limit: 4
+  memory:
+    guarantee: 4G
+    limit: 16G
   profileList:
     - display_name: "Llama2 GPU Environment"
       description: "Environment with Llama2 model and GPU support"
       kubespawner_override:
         node_selector:
-          cloud.google.com/gke-accelerator: nvidia-tesla-t4
+          cloud.google.com/gke-accelerator: "true"
         tolerations:
         - key: "nvidia.com/gpu"
           operator: "Equal"
