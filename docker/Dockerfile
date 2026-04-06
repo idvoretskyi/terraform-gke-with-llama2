@@ -1,5 +1,5 @@
 # PyTorch + JupyterLab base image (includes torch, jupyterlab, and build-essential)
-FROM quay.io/jupyter/pytorch-notebook:python-3.11
+FROM quay.io/jupyter/pytorch-notebook:python-3.13
 
 USER root
 
