@@ -1,5 +1,5 @@
-# Base image with JupyterLab and TensorFlow
-FROM jupyter/tensorflow-notebook:latest
+# Base image with JupyterLab and PyTorch (matches our ML stack)
+FROM quay.io/jupyter/pytorch-notebook:python-3.11
 
 USER root
 
@@ -12,9 +12,11 @@ RUN apt-get update && \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install PyTorch with CUDA support
+# Install PyTorch with CUDA 11.8 support
 RUN pip install --no-cache-dir \
-    torch torchvision torchaudio \
+    torch==2.1.2 \
+    torchvision==0.16.2 \
+    torchaudio==2.1.2 \
     --extra-index-url https://download.pytorch.org/whl/cu118
 
 # Install Hugging Face Transformers and related packages
@@ -34,10 +36,6 @@ RUN pip install --no-cache-dir \
 COPY download-llama2.py /opt/download-llama2.py
 RUN echo "exec python /opt/download-llama2.py" > /usr/local/bin/start-notebook.d/download-llama2.sh && \
     chmod +x /usr/local/bin/start-notebook.d/download-llama2.sh
-
-# Copy example notebook
-COPY llama2-example.ipynb /home/jovyan/llama2-example.ipynb
-RUN chown jovyan:users /home/jovyan/llama2-example.ipynb
 
 # Switch back to jovyan user
 USER jovyan

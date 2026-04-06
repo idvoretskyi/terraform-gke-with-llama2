@@ -3,7 +3,6 @@
 terraform.tfstate
 terraform.tfstate.backup
 terraform.tfstate.*.backup
-.terraform.lock.hcl
 .terraformrc
 terraform.rc
 terraform.tfvars
@@ -17,6 +16,9 @@ override.tf.json
 
 # Exclude terraform.tfvars.example
 !terraform.tfvars.example
+
+# Include .dockerignore (may be excluded by global gitignore)
+!.dockerignore
 
 # OS specific files
 .DS_Store

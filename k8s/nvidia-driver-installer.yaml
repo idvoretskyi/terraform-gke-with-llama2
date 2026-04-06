@@ -1,3 +1,12 @@
+# Official GKE NVIDIA GPU driver installer DaemonSet
+#
+# Modern GKE clusters (1.27+) with COS_CONTAINERD images install GPU drivers
+# automatically. This manifest is provided as a fallback for clusters where
+# automatic installation is disabled or for older GKE versions.
+#
+# For the latest version, see:
+# https://raw.githubusercontent.com/GoogleCloudPlatform/container-engine-accelerators/master/nvidia-driver-installer/cos/daemonset-preloaded-latest.yaml
+
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -9,22 +18,34 @@ spec:
   selector:
     matchLabels:
       k8s-app: nvidia-driver-installer
+  updateStrategy:
+    type: RollingUpdate
   template:
     metadata:
       labels:
         k8s-app: nvidia-driver-installer
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cloud.google.com/gke-accelerator
+                operator: Exists
       tolerations:
-      - key: "nvidia.com/gpu"
-        effect: "NoSchedule"
-        operator: "Exists"
+      - operator: Exists
+      hostNetwork: true
+      hostPID: true
       volumes:
       - name: dev
         hostPath:
           path: /dev
-      - name: driver-install-dir
+      - name: vulkan-icd-mount
         hostPath:
-          path: /home/kubernetes/bin/drivers
+          path: /home/kubernetes/bin/nvidia/vulkan/icd.d
+      - name: nvidia-install-dir-host
+        hostPath:
+          path: /home/kubernetes/bin/nvidia
       - name: root-mount
         hostPath:
           path: /
@@ -34,18 +55,29 @@ spec:
         name: nvidia-driver-installer
         resources:
           requests:
-            cpu: 0.15
+            cpu: "150m"
         securityContext:
           privileged: true
+        env:
+        - name: NVIDIA_INSTALL_DIR_HOST
+          value: /home/kubernetes/bin/nvidia
+        - name: NVIDIA_INSTALL_DIR_CONTAINER
+          value: /usr/local/nvidia
+        - name: VULKAN_ICD_DIR_HOST
+          value: /home/kubernetes/bin/nvidia/vulkan/icd.d
+        - name: VULKAN_ICD_DIR_CONTAINER
+          value: /etc/vulkan/icd.d
+        - name: ROOT_MOUNT_DIR
+          value: /root
         volumeMounts:
+        - name: nvidia-install-dir-host
+          mountPath: /usr/local/nvidia
+        - name: vulkan-icd-mount
+          mountPath: /etc/vulkan/icd.d
         - name: dev
           mountPath: /dev
-        - name: driver-install-dir
-          mountPath: /usr/local/bin/drivers
         - name: root-mount
           mountPath: /root
       containers:
-      - image: "gcr.io/google-containers/pause:3.1"
+      - image: "gcr.io/google-containers/pause:3.9"
         name: pause
-      nodeSelector:
-        cloud.google.com/gke-accelerator: nvidia-tesla-t4

@@ -13,8 +13,17 @@ terraform {
       version = "~> 2.10"
     }
   }
-  
-  required_version = ">= 1.0.0"
+
+  required_version = ">= 1.5.0, < 2.0.0"
+
+  # Remote backend for state storage with locking
+  # Create the GCS bucket before running terraform init:
+  #   gsutil mb -p <PROJECT_ID> -l <REGION> gs://<BUCKET_NAME>
+  #   gsutil versioning set on gs://<BUCKET_NAME>
+  backend "gcs" {
+    bucket = "" # Set via -backend-config="bucket=<BUCKET_NAME>" or in backend.hcl
+    prefix = "terraform/state"
+  }
 }
 
 # Configure Google providers

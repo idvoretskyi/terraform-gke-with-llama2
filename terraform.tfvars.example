@@ -1,9 +1,28 @@
 # Example values for variables - copy to terraform.tfvars and modify as needed
-project_id      = "your-gcp-project-id"
-region          = "us-central1"
-zone            = "us-central1-a"
-cluster_name    = "llama2-jupyter-cluster"
-gpu_node_count  = 1
-machine_type    = "n1-standard-8"
-gpu_type        = "nvidia-tesla-t4"
-gpu_count       = 1
+#
+# Required:
+#   project_id  - Your GCP project ID
+#
+# Optional (defaults shown):
+#   region, zone, cluster_name, network_name, subnet_cidr, etc.
+
+project_id       = "your-gcp-project-id"
+region           = "us-central1"
+zone             = "us-central1-a"
+cluster_name     = "llama2-jupyter-cluster"
+network_name     = "llama2-network"
+subnet_cidr      = "10.10.0.0/20"
+pods_cidr        = "10.20.0.0/14"
+services_cidr    = "10.24.0.0/20"
+
+# CPU node pool
+cpu_machine_type = "e2-medium"
+
+# GPU node pool
+gpu_node_count   = 1
+gpu_machine_type = "n1-standard-8"    # Must be N1 or A2 family for GPU attachment
+gpu_type         = "nvidia-tesla-t4"  # Options: nvidia-tesla-t4, nvidia-tesla-v100, nvidia-tesla-a100
+gpu_count        = 1
+
+# Shared
+disk_size_gb     = 100
