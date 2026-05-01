@@ -1,0 +1,30 @@
+# Repository settings — managed by https://github.com/apps/settings
+
+repository:
+  name: terraform-gke-with-llama2
+  description: Terraform configuration for deploying Llama 2 on a GPU-enabled GKE cluster with JupyterHub for interactive model usage
+  homepage: https://github.com/idvoretskyi/terraform-gke-with-llama2
+  topics:
+    - gke
+    - google-cloud
+    - kubernetes
+    - terraform
+    - llama2
+    - llm
+    - gpu
+    - ai
+    - machine-learning
+    - jupyterhub
+    - infrastructure-as-code
+  private: false
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_downloads: true
+  default_branch: main
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+  enable_automated_security_fixes: true
+  enable_vulnerability_alerts: true
